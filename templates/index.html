@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Symptom Info Checker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="wrapper">
+        <header>
+            <h1>Symptom Checker</h1>
+            <p>Get general health information (not medical advice)</p>
+        </header>
+
+        <div class="warning-box">
+            <strong>⚠️ Important:</strong> This is for educational purposes only. Not a replacement for seeing a real doctor. Always consult a healthcare professional.
+        </div>
+
+        <main>
+            <div class="input-area">
+                <h2>Describe what you're experiencing</h2>
+                <form id="symptomForm">
+                    <textarea id="symptomInput" placeholder="Example: I have a sore throat and mild fever for 2 days..." required></textarea>
+                    <button type="submit" class="btn-submit">Check Symptoms</button>
+                </form>
+            </div>
+
+            <div id="loading" class="loader" style="display:none;">
+                <div class="spinner"></div>
+                <p>Analyzing...</p>
+            </div>
+
+            <div id="resultArea" class="results" style="display:none;">
+                <div id="resultText"></div>
+                <p id="warningMsg" class="warning-text"></p>
+                <button onclick="resetForm()" class="btn-reset">Check Again</button>
+            </div>
+
+            <div id="errorBox" class="error-box" style="display:none;"></div>
+        </main>
+
+        <footer>
+            <p>Not a substitute for professional medical advice</p>
+        </footer>
+    </div>
+
+    <script>
+        const form = document.getElementById('symptomForm');
+        const input = document.getElementById('symptomInput');
+        const loading = document.getElementById('loading');
+        const resultArea = document.getElementById('resultArea');
+        const resultText = document.getElementById('resultText');
+        const errorBox = document.getElementById('errorBox');
+        const warningMsg = document.getElementById('warningMsg');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const symptoms = input.value.trim();
+            if (!symptoms) {
+                showError('Please enter your symptoms');
+                return;
+            }
+
+            await checkSymptoms(symptoms);
+        });
+
+        async function checkSymptoms(symptoms) {
+            loading.style.display = 'flex';
+            resultArea.style.display = 'none';
+            errorBox.style.display = 'none';
+
+            try {
+                const res = await fetch('/api/check-symptoms', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ symptoms: symptoms })
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    showError(data.error || 'Something went wrong');
+                    loading.style.display = 'none';
+                    return;
+                }
+
+                loading.style.display = 'none';
+                resultText.innerHTML = data.analysis.replace(/\n/g, '<br>');
+                warningMsg.textContent = data.warning;
+                resultArea.style.display = 'block';
+
+            } catch (err) {
+                showError('Failed to connect: ' + err.message);
+                loading.style.display = 'none';
+            }
+        }
+
+        function showError(msg) {
+            errorBox.textContent = msg;
+            errorBox.style.display = 'block';
+            resultArea.style.display = 'none';
+            loading.style.display = 'none';
+        }
+
+        function resetForm() {
+            input.value = '';
+            resultArea.style.display = 'none';
+            input.focus();
+        }
+    </script>
+</body>
+</html>
